@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder; // Importe o PasswordEncoder
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,7 +28,10 @@ public class AuthenticationController {
 
     @Autowired
     private UserRepository userRepository;
-     
+
+    @Autowired
+    private PasswordEncoder passwordEncoder; // <<< 1. INJETAR O BEAN AQUI
+
     @PostMapping("/login")
     public ResponseEntity login(@RequestBody AuthenticationDTO data) {
         var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.password());
@@ -38,20 +41,21 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity register(@Validated @RequestBody RegisterDTO data) {
+    public ResponseEntity register( @RequestBody RegisterDTO data) {
         if(this.userRepository.findByEmail(data.email()) != null) {
             return ResponseEntity.badRequest().body("Email already registered");
         }
 
-        String encodePassword = new BCryptPasswordEncoder().encode(data.password());
-        User user = new User(data.email(), encodePassword, data.role(), data.name());
+        // <<< 2. USAR O BEAN INJETADO PARA CODIFICAR A SENHA
+        String encodePassword = this.passwordEncoder.encode(data.password());
+        User user = new User(data.name(), data.email(), encodePassword, data.role());
 
         this.userRepository.save(user);
         URI location = ServletUriComponentsBuilder
-                        .fromCurrentRequest()
-                        .path("/{id}")
-                        .buildAndExpand(user.getId())
-                        .toUri();
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(user.getId())
+                .toUri();
         return ResponseEntity.created(location).body(user);
     }
 }

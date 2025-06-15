@@ -38,11 +38,11 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private UserRole role;
 
-    public User(String email, String password, UserRole role, String name){
+    public User(String name, String email, String password, UserRole role){
+        this.name = name;
         this.email = email;
         this.password = password;
         this.role = role;
-        this.name = name;
     }
 
     void setRole(UserRole role) {
