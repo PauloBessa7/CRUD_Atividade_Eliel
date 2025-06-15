@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.br.uSafe.DTO.AuthenticationDTO;
+import com.br.uSafe.DTO.LoginResponseDTO;
 import com.br.uSafe.DTO.RegisterDTO;
+import com.br.uSafe.infra.security.TokenService;
 import com.br.uSafe.model.User;
 import com.br.uSafe.repositories.UserRepository;
 
@@ -30,14 +32,16 @@ public class AuthenticationController {
     private UserRepository userRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder; // <<< 1. INJETAR O BEAN AQUI
+    private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private TokenService tokenService; 
     @PostMapping("/login")
     public ResponseEntity login(@RequestBody AuthenticationDTO data) {
         var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.password());
         var auth = this.authenticationManager.authenticate(usernamePassword);
-
-        return ResponseEntity.ok().build();
+        var token = tokenService.generateToken((User)auth.getPrincipal());
+        return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 
     @PostMapping("/register")
@@ -46,7 +50,6 @@ public class AuthenticationController {
             return ResponseEntity.badRequest().body("Email already registered");
         }
 
-        // <<< 2. USAR O BEAN INJETADO PARA CODIFICAR A SENHA
         String encodePassword = this.passwordEncoder.encode(data.password());
         User user = new User(data.name(), data.email(), encodePassword, data.role());
 
